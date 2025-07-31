@@ -27,9 +27,10 @@
         </tbody>
       </table>
     </div>
-  </template>
+</template>
   
-  <script setup lang="ts">
+<script setup lang="ts">
+
   const config = useRuntimeConfig()
   const summary = ref<any>(null)
   const loading = ref(true)
@@ -49,5 +50,5 @@
     fetchSummary()
     setInterval(fetchSummary, 10000) // auto-refresh every 10s
   })
-  </script>
+</script>
   
