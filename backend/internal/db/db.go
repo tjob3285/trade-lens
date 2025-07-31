@@ -86,4 +86,16 @@ func createTables(db *sql.DB) {
 		log.Fatal("Error creating tables:", err)
 	}
 	log.Println("Tables created or verified")
+
+	userTable := `
+    CREATE TABLE IF NOT EXISTS users (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        email TEXT UNIQUE NOT NULL,
+        password_hash TEXT NOT NULL,
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+    );`
+	_, err = db.Exec(userTable)
+	if err != nil {
+		log.Fatal("Error creating users table:", err)
+	}
 }

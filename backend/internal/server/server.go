@@ -17,6 +17,9 @@ func Start(port string, db *sql.DB) {
 	http.HandleFunc("/summary", handlers.GetSummaryHandler(db))
 	http.HandleFunc("/prices/history", handlers.GetPriceHistoryHandler(db))
 
+	http.HandleFunc("/auth/register", handlers.RegisterHandler(db))
+	http.HandleFunc("/auth/login", handlers.LoginHandler(db))
+
 	log.Println("Starting server on port", port)
 	err := http.ListenAndServe(":"+port, nil)
 	if err != nil {
