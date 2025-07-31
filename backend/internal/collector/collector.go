@@ -121,6 +121,7 @@ func calculateAndStoreIndicator(db *sql.DB, assetID int) {
 	}
 
 	log.Printf("Indicators for asset %d: RSI=%.2f, EMA12=%.2f, EMA26=%.2f", assetID, rsi, emaShort, emaLong)
+	generateSignal(db, assetID, rsi, emaShort, emaLong)
 }
 
 func calcEMA(prices []float64, period int) float64 {
@@ -157,4 +158,52 @@ func calcRSI(prices []float64, period int) float64 {
 	}
 	rs := avgGain / avgLoss
 	return 100 - (100 / (1 + rs))
+}
+
+func generateSignal(db *sql.DB, assetID int, rsi, emaShort, emaLong float64) {
+	signalType := "HOLD"
+	confidence := 0.0
+	reason := ""
+
+	if rsi < 30 {
+		signalType = "BUY"
+		confidence += 50
+		reason += "RSI<30"
+	} else if rsi > 70 {
+		signalType = "SELL"
+		confidence += 50
+		reason += "RSI>70"
+	}
+
+	if emaShort > emaLong {
+		if signalType == "BUY" {
+			confidence += 50
+		} else {
+			signalType = "BUY"
+			confidence = 50
+		}
+		reason += "EMA12>EMA26 "
+	} else if emaShort < emaLong {
+		if signalType == "SELL" {
+			confidence += 50
+		} else {
+			signalType = "SELL"
+			confidence = 50
+		}
+		reason += "EMA12<EMA26 "
+	}
+
+	if signalType == "HOLD" {
+		confidence = 100 // Strong hold if neutral
+	}
+
+	_, err := db.Exec(`INSERT INTO signals (asset_id, timestamp, signal_type, confidence, reason)
+	VALUES (?, ?, ?, ?, ?)`,
+		assetID, time.Now().Format(time.RFC3339), signalType, confidence, reason)
+	if err != nil {
+		log.Printf("Error inserting signal for asset %d: %v", assetID, err)
+		return
+	}
+
+	log.Printf("Signal generated for asset %d: %s (%.0f%%) Reason: %s", assetID, signalType, confidence, reason)
 }

@@ -44,3 +44,40 @@ func GetSignalsHandler(db *sql.DB) http.HandlerFunc {
 		json.NewEncoder(w).Encode(signals)
 	}
 }
+
+type SignalResponse struct {
+	Symbol     string  `json:"symbol"`
+	SignalType string  `json:"signal_type"`
+	Confidence float64 `json:"confidence"`
+	Reason     string  `json:"reason"`
+	Timestamp  string  `json:"timestamp"`
+}
+
+func GetLatestSignalHandler(db *sql.DB) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		symbol := r.URL.Query().Get("symbol")
+		if symbol == "" {
+			http.Error(w, "Missing 'symbol'", http.StatusBadRequest)
+			return
+		}
+
+		query := `
+            SELECT a.symbol, s.signal_type, s.confidence, s.reason, s.timestamp
+            FROM signals s
+            JOIN assets a ON s.asset_id = a.id
+            WHERE a.symbol = ?
+            ORDER BY s.timestamp DESC LIMIT 1
+        `
+
+		var res SignalResponse
+		err := db.QueryRow(query, symbol).Scan(&res.Symbol, &res.SignalType, &res.Confidence, &res.Reason, &res.Timestamp)
+		if err != nil {
+			log.Println("Error fetching signal:", err)
+			http.Error(w, "Signal not found", http.StatusNotFound)
+			return
+		}
+
+		w.Header().Set("Content-Type", "application/json")
+		json.NewEncoder(w).Encode(res)
+	}
+}
